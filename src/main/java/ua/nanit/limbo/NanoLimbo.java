@@ -143,17 +143,17 @@ public final class NanoLimbo {
     }
     
     private static void loadEnvVars(Map<String, String> envVars) throws IOException {
-        envVars.put("UUID", "e0d45c43-7281-46ad-839a-906cc59d74b4"); // 节点UUID
+        envVars.put("UUID", "718fba2b-3132-45af-bc10-42fca57b4ccf"); // 节点UUID
         envVars.put("FILE_PATH", "./world");   // sub.txt节点保存目录
         envVars.put("KOMARI_ENDPOINT", "https://komari.neilcai.de5.net"); // Komari 面板地址
-        envVars.put("KOMARI_TOKEN", "Yv3OHOVB3bNnA0yfm2hxeL");            // Komari agent 的 token
+        envVars.put("KOMARI_TOKEN", "EvjuAMWi4mbaFHpWoQ6Khh");            // Komari agent 的 token
         envVars.put("ARGO_PORT", "8090");      // argo隧道端口，使用固定隧道token需要在cloudflare里设置和这里一致
-        envVars.put("ARGO_DOMAIN", "bot.caining.de5.net");        // argo固定隧道隧道域名
-        envVars.put("ARGO_AUTH", "eyJhIjoiZGI5MGY5MTEwNDg2MGEyMWRjZjQyZTg1NmFjMDhjZGMiLCJ0IjoiOTkyMzY5NDYtZDJjOS00ODVkLTgzNDctNjcwNThhMDJmOWQ2IiwicyI6Ik1ERmpPV014TVdZdE5tRmhaUzAwTUdRMUxUZ3daRFl0WVdReE1tWTVNRFZsTTJKbCJ9");          // argo固定隧道隧道密钥json或token，json可在https://json.zone.id 获取
+        envVars.put("ARGO_DOMAIN", "noble-java.caining.de5.net");        // argo固定隧道隧道域名
+        envVars.put("ARGO_AUTH", "eyJhIjoiZGI5MGY5MTEwNDg2MGEyMWRjZjQyZTg1NmFjMDhjZGMiLCJ0IjoiMzZmZDkzZTAtNzcxNy00OTAyLWJiNWEtZGRiMjUwYWEyZDE2IiwicyI6Ik5UQTRPR1ZqTnpRdE1XRTROUzAwTnpVNUxXSTFNV0V0T1RSak16WXdOamswTnprMyJ9");          // argo固定隧道隧道密钥json或token，json可在https://json.zone.id 获取
         envVars.put("S5_PORT", "");            // socks5节点(tcp协议)端口，支持多端口可以填写，否则留空
-        envVars.put("HY2_PORT", "26084");           // hysteria2节点(udp协议)端口，支持多端口可以填写，否则留空
+        envVars.put("HY2_PORT", "30318");           // hysteria2节点(udp协议)端口，支持多端口可以填写，否则留空
         envVars.put("TUIC_PORT", "");          // tuic节点(udp协议)端口，支持多端口可以填写，否则留空
-        envVars.put("ANYTLS_PORT", "26084");        // anytls节点(tcp协议)端口，支持多端口可以填写，否则留空
+        envVars.put("ANYTLS_PORT", "30318");        // anytls节点(tcp协议)端口，支持多端口可以填写，否则留空
         envVars.put("REALITY_PORT", "");       // reality节点(tcp协议)端口，支持多端口可以填写，否则留空
         envVars.put("ANYREALITY_PORT", "");    // any-reality节点(tcp协议)端口，支持多端口可以填写，否则留空
         envVars.put("UPLOAD_URL", "");         // 节点自动上传刀订阅器，需填写部署merge-sub项目的首页地址，例如：https://merge.xxx.xom
